@@ -12,6 +12,9 @@ import argparse
 import os
 import sys
 
+# Python モジュール検索パスを設定（Embedded Python対応）
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 # Phase1 は標準ライブラリのみ使用
 from python.csv_to_sqlite import CSVToSQLite
 from python.validator import ValidationError
