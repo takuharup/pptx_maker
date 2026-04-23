@@ -1,0 +1,130 @@
+[
+  {
+    "case_id": "1a",
+    "config_file": "input_202604_case1a",
+    "conditions": "flat底面",
+    "max_height": 0.125,
+    "dispersion_height": 0.088,
+    "gas_holdup": 0.718
+  },
+  {
+    "case_id": "1b",
+    "config_file": "input_202604_case1b",
+    "conditions": "flat底面",
+    "max_height": 0.138,
+    "dispersion_height": 0.096,
+    "gas_holdup": 0.742
+  },
+  {
+    "case_id": "1c",
+    "config_file": "input_202604_case1c",
+    "conditions": "flat底面",
+    "max_height": 0.152,
+    "dispersion_height": 0.105,
+    "gas_holdup": 0.761
+  },
+  {
+    "case_id": "1d",
+    "config_file": "input_202604_case1d",
+    "conditions": "curved底面",
+    "max_height": 0.119,
+    "dispersion_height": 0.082,
+    "gas_holdup": 0.705
+  },
+  {
+    "case_id": "1e",
+    "config_file": "input_202604_case1e",
+    "conditions": "curved底面",
+    "max_height": 0.131,
+    "dispersion_height": 0.091,
+    "gas_holdup": 0.728
+  },
+  {
+    "case_id": "1f",
+    "config_file": "input_202604_case1f",
+    "conditions": "curved底面",
+    "max_height": 0.145,
+    "dispersion_height": 0.1,
+    "gas_holdup": 0.75
+  },
+  {
+    "case_id": "1g",
+    "config_file": "input_202604_case1g",
+    "conditions": "flat底面",
+    "max_height": 0.198,
+    "dispersion_height": 0.141,
+    "gas_holdup": 0.839
+  },
+  {
+    "case_id": "1h",
+    "config_file": "input_202604_case1h",
+    "conditions": "flat底面",
+    "max_height": 0.215,
+    "dispersion_height": 0.155,
+    "gas_holdup": 0.861
+  },
+  {
+    "case_id": "1i",
+    "config_file": "input_202604_case1i",
+    "conditions": "flat底面",
+    "max_height": 0.231,
+    "dispersion_height": 0.168,
+    "gas_holdup": 0.879
+  },
+  {
+    "case_id": "1j",
+    "config_file": "input_202604_case1j",
+    "conditions": "curved底面",
+    "max_height": 0.188,
+    "dispersion_height": 0.133,
+    "gas_holdup": 0.822
+  },
+  {
+    "case_id": "1k",
+    "config_file": "input_202604_case1k",
+    "conditions": "curved底面",
+    "max_height": 0.201,
+    "dispersion_height": 0.144,
+    "gas_holdup": 0.845
+  },
+  {
+    "case_id": "1l",
+    "config_file": "input_202604_case1l",
+    "conditions": "curved底面",
+    "max_height": 0.218,
+    "dispersion_height": 0.158,
+    "gas_holdup": 0.868
+  },
+  {
+    "case_id": "1m",
+    "config_file": "input_202604_case1m",
+    "conditions": "flat底面",
+    "max_height": 0.142,
+    "dispersion_height": 0.099,
+    "gas_holdup": 0.731
+  },
+  {
+    "case_id": "1n",
+    "config_file": "input_202604_case1n",
+    "conditions": "flat底面",
+    "max_height": 0.156,
+    "dispersion_height": 0.11,
+    "gas_holdup": 0.755
+  },
+  {
+    "case_id": "1o",
+    "config_file": "input_202604_case1o",
+    "conditions": "flat底面",
+    "max_height": 0.171,
+    "dispersion_height": 0.122,
+    "gas_holdup": 0.778
+  },
+  {
+    "case_id": "1q",
+    "config_file": "input_202604_case1q",
+    "conditions": "curved底面",
+    "max_height": 0.135,
+    "dispersion_height": 0.094,
+    "gas_holdup": 0.718
+  }
+]
