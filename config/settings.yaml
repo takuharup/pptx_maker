@@ -1,13 +1,21 @@
 paths:
   db_path: data/work/database.db
+  python_exe: python        # Embedded Python の場合はフルパスに変更
   input_dir: data/input
   work_dir: data/work
   output_dir: data/output
 
-sqlite:
-  timeout: 30
-  check_same_thread: false
+# Phase 1 で使用する CSV の列名（変更した場合はここを修正）
+csv:
+  required_columns:
+    - ケース番号
+    - 設定ファイル名
+    - 設定条件
+    - 最大高さ
+    - 90%高さ
+    - ガスホールドアップ
 
+# VBA が確認する必須シェイプ名（テンプレート PPTX と合わせること）
 pptx:
   required_shapes:
     - TXT_ConfigFile
@@ -20,4 +28,3 @@ pptx:
 
 logging:
   level: INFO
-  format: "[%(asctime)s] %(levelname)s: %(message)s"

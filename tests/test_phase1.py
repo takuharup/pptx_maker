@@ -1,178 +1,181 @@
-"""Tests for Phase 1: CSV → SQLite."""
+"""Tests for Phase 1: CSV → SQLite (python/ modules)."""
 import os
+import json
 import sqlite3
 import tempfile
 import textwrap
 
 import pytest
 
-from core.phase1_builder import (
-    CSVReader,
-    DataValidator,
-    Phase1Pipeline,
-    SQLiteWriter,
+from python.validator import (
+    ValidationError,
+    validate_columns,
+    validate_row,
+    normalise_case_id,
+    REQUIRED_COLUMNS,
 )
-from core.validator import ValidationError
+from python.csv_to_sqlite import CSVToSQLite
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Sample data
 # ---------------------------------------------------------------------------
-SAMPLE_CSV_CONTENT = textwrap.dedent("""\
+SAMPLE_CSV = textwrap.dedent("""\
     ケース番号,設定条件,追加条件,その他,設定ファイル名,最大高さ,90%高さ,ガスホールドアップ
     1a,flat底面,z=40 mm,,input_202604_case1a,0.125,0.088,0.718
     1b,flat底面,z=60 mm,,input_202604_case1b,0.138,0.096,0.742
+    1c,curved底面,z=40 mm,,input_202604_case1c,0.119,0.082,0.705
 """)
 
 
-def _write_csv(content: str, suffix=".csv") -> str:
-    fd, path = tempfile.mkstemp(suffix=suffix)
-    with os.fdopen(fd, "w", encoding="utf-8") as f:
+def _write_csv(content: str) -> str:
+    fd, path = tempfile.mkstemp(suffix='.csv')
+    with os.fdopen(fd, 'w', encoding='utf-8') as f:
         f.write(content)
     return path
 
 
 # ---------------------------------------------------------------------------
-# CSVReader
+# validator.py
 # ---------------------------------------------------------------------------
-class TestCSVReader:
-    def test_read_valid(self):
-        path = _write_csv(SAMPLE_CSV_CONTENT)
-        try:
-            df = CSVReader().read(path)
-            assert len(df) == 2
-            assert "ケース番号" in df.columns
-        finally:
-            os.unlink(path)
+class TestValidateColumns:
+    def test_all_required_present(self):
+        validate_columns(REQUIRED_COLUMNS)  # should not raise
 
-    def test_file_not_found(self):
-        with pytest.raises(ValidationError, match="not found"):
-            CSVReader().read("/nonexistent/path.csv")
+    def test_missing_column_raises(self):
+        cols = [c for c in REQUIRED_COLUMNS if c != '最大高さ']
+        with pytest.raises(ValidationError, match='最大高さ'):
+            validate_columns(cols)
+
+    def test_extra_columns_ok(self):
+        validate_columns(REQUIRED_COLUMNS + ['余分な列'])
 
 
-# ---------------------------------------------------------------------------
-# DataValidator
-# ---------------------------------------------------------------------------
-class TestDataValidator:
-    def _df(self, content=SAMPLE_CSV_CONTENT):
-        path = _write_csv(content)
-        try:
-            return CSVReader().read(path)
-        finally:
-            os.unlink(path)
+class TestValidateRow:
+    def _row(self, **overrides):
+        base = {
+            'ケース番号': '1a',
+            '設定ファイル名': 'input_case1a',
+            '設定条件': 'flat底面',
+            '最大高さ': '0.125',
+            '90%高さ': '0.088',
+            'ガスホールドアップ': '0.718',
+        }
+        base.update(overrides)
+        return base
 
-    def test_valid_passes(self):
-        DataValidator().validate(self._df())  # should not raise
+    def test_valid_row(self):
+        validate_row(self._row(), lineno=2)  # should not raise
 
-    def test_missing_column(self):
-        bad_csv = textwrap.dedent("""\
-            ケース番号,設定条件,設定ファイル名,最大高さ,ガスホールドアップ
-            1a,flat底面,input_202604_case1a,0.125,0.718
-        """)
-        with pytest.raises(ValidationError, match="missing required columns"):
-            DataValidator().validate(self._df(bad_csv))
-
-    def test_duplicate_case_id(self):
-        dup_csv = textwrap.dedent("""\
-            ケース番号,設定条件,追加条件,その他,設定ファイル名,最大高さ,90%高さ,ガスホールドアップ
-            1a,flat底面,,,input_202604_case1a,0.125,0.088,0.718
-            1a,flat底面,,,input_202604_case1a,0.125,0.088,0.718
-        """)
-        with pytest.raises(ValidationError, match="Duplicate"):
-            DataValidator().validate(self._df(dup_csv))
+    def test_empty_case_id_raises(self):
+        with pytest.raises(ValidationError, match='ケース番号'):
+            validate_row(self._row(**{'ケース番号': ''}), lineno=2)
 
     def test_non_numeric_raises(self):
+        with pytest.raises(ValidationError, match='最大高さ'):
+            validate_row(self._row(**{'最大高さ': 'ABC'}), lineno=5)
+
+    def test_empty_numeric_raises(self):
+        with pytest.raises(ValidationError, match='90%高さ'):
+            validate_row(self._row(**{'90%高さ': ''}), lineno=3)
+
+
+class TestNormaliseCaseId:
+    def test_plain(self):
+        assert normalise_case_id('1a') == '1a'
+
+    def test_with_prefix(self):
+        assert normalise_case_id('ケース1a') == '1a'
+
+    def test_uppercase(self):
+        assert normalise_case_id('Case1B') == '1b'
+
+    def test_numeric_only(self):
+        assert normalise_case_id('2') == '2'
+
+
+# ---------------------------------------------------------------------------
+# csv_to_sqlite.py
+# ---------------------------------------------------------------------------
+class TestCSVToSQLite:
+    def test_run_creates_db(self, tmp_path):
+        csv_path = tmp_path / 'sample.csv'
+        csv_path.write_text(SAMPLE_CSV, encoding='utf-8')
+        db_path = str(tmp_path / 'work' / 'database.db')
+
+        converter = CSVToSQLite(db_path)
+        rows = converter.run(str(csv_path))
+
+        assert len(rows) == 3
+        assert os.path.isfile(db_path)
+
+    def test_db_contains_rows(self, tmp_path):
+        csv_path = tmp_path / 'sample.csv'
+        csv_path.write_text(SAMPLE_CSV, encoding='utf-8')
+        db_path = str(tmp_path / 'work' / 'database.db')
+
+        converter = CSVToSQLite(db_path)
+        converter.run(str(csv_path))
+
+        con = sqlite3.connect(db_path)
+        rows = con.execute('SELECT case_id FROM cases ORDER BY case_id').fetchall()
+        con.close()
+        assert [r[0] for r in rows] == ['1a', '1b', '1c']
+
+    def test_upsert_no_duplicate(self, tmp_path):
+        csv_path = tmp_path / 'sample.csv'
+        csv_path.write_text(SAMPLE_CSV, encoding='utf-8')
+        db_path = str(tmp_path / 'work' / 'database.db')
+
+        converter = CSVToSQLite(db_path)
+        converter.run(str(csv_path))
+        converter.run(str(csv_path))  # second run should upsert
+
+        con = sqlite3.connect(db_path)
+        count = con.execute('SELECT COUNT(*) FROM cases').fetchone()[0]
+        con.close()
+        assert count == 3
+
+    def test_file_not_found_raises(self, tmp_path):
+        converter = CSVToSQLite(str(tmp_path / 'database.db'))
+        with pytest.raises(ValidationError, match='見つかりません'):
+            converter.run('/no/such/file.csv')
+
+    def test_missing_column_raises(self, tmp_path):
         bad_csv = textwrap.dedent("""\
-            ケース番号,設定条件,追加条件,その他,設定ファイル名,最大高さ,90%高さ,ガスホールドアップ
-            1a,flat底面,,,input_202604_case1a,ABC,0.088,0.718
+            ケース番号,設定条件,設定ファイル名,最大高さ,ガスホールドアップ
+            1a,flat底面,input_case1a,0.125,0.718
         """)
-        with pytest.raises(ValidationError, match="non-numeric"):
-            DataValidator().validate(self._df(bad_csv))
+        csv_path = tmp_path / 'bad.csv'
+        csv_path.write_text(bad_csv, encoding='utf-8')
+        converter = CSVToSQLite(str(tmp_path / 'database.db'))
+        with pytest.raises(ValidationError, match='必須列'):
+            converter.run(str(csv_path))
 
+    def test_duplicate_case_id_raises(self, tmp_path):
+        dup_csv = textwrap.dedent("""\
+            ケース番号,設定条件,追加条件,その他,設定ファイル名,最大高さ,90%高さ,ガスホールドアップ
+            1a,flat底面,,,input_case1a,0.125,0.088,0.718
+            1a,flat底面,,,input_case1a,0.125,0.088,0.718
+        """)
+        csv_path = tmp_path / 'dup.csv'
+        csv_path.write_text(dup_csv, encoding='utf-8')
+        converter = CSVToSQLite(str(tmp_path / 'database.db'))
+        with pytest.raises(ValidationError, match='重複'):
+            converter.run(str(csv_path))
 
-# ---------------------------------------------------------------------------
-# SQLiteWriter
-# ---------------------------------------------------------------------------
-class TestSQLiteWriter:
-    def test_write_and_read_back(self):
-        csv_path = _write_csv(SAMPLE_CSV_CONTENT)
-        try:
-            df = CSVReader().read(csv_path)
-            with tempfile.TemporaryDirectory() as tmp:
-                db_path = os.path.join(tmp, "test.db")
-                writer = SQLiteWriter(db_path)
-                count = writer.write(df)
-                assert count == 2
-                con = sqlite3.connect(db_path)
-                rows = con.execute("SELECT case_id FROM cases ORDER BY case_id").fetchall()
-                con.close()
-                assert [r[0] for r in rows] == ["1a", "1b"]
-        finally:
-            os.unlink(csv_path)
+    def test_export_json(self, tmp_path):
+        csv_path = tmp_path / 'sample.csv'
+        csv_path.write_text(SAMPLE_CSV, encoding='utf-8')
+        db_path = str(tmp_path / 'work' / 'database.db')
+        json_path = str(tmp_path / 'work' / 'cases.json')
 
-    def test_upsert_overwrites(self):
-        csv_path = _write_csv(SAMPLE_CSV_CONTENT)
-        try:
-            df = CSVReader().read(csv_path)
-            with tempfile.TemporaryDirectory() as tmp:
-                db_path = os.path.join(tmp, "test.db")
-                writer = SQLiteWriter(db_path)
-                writer.write(df)
-                writer.write(df)  # second write should upsert, not duplicate
-                con = sqlite3.connect(db_path)
-                count = con.execute("SELECT COUNT(*) FROM cases").fetchone()[0]
-                con.close()
-                assert count == 2
-        finally:
-            os.unlink(csv_path)
+        converter = CSVToSQLite(db_path)
+        rows = converter.run(str(csv_path))
+        converter.export_json(rows, json_path)
 
-
-# ---------------------------------------------------------------------------
-# Phase1Pipeline (integration)
-# ---------------------------------------------------------------------------
-class TestPhase1Pipeline:
-    def test_full_run(self, tmp_path):
-        csv_path = tmp_path / "sample.csv"
-        csv_path.write_text(SAMPLE_CSV_CONTENT, encoding="utf-8")
-
-        cfg_path = _make_config(tmp_path)
-        pipeline = Phase1Pipeline(config_path=cfg_path)
-        result = pipeline.run(csv_path=str(csv_path))
-
-        assert result["status"] == "success"
-        assert result["rows_written"] == 2
-        assert os.path.isfile(result["db_path"])
-
-    def test_run_returns_error_on_bad_csv(self, tmp_path):
-        cfg_path = _make_config(tmp_path)
-        pipeline = Phase1Pipeline(config_path=cfg_path)
-        result = pipeline.run(csv_path="/no/such/file.csv")
-        assert result["status"] == "error"
-
-
-def _make_config(tmp_path) -> str:
-    import yaml
-
-    cfg = {
-        "paths": {
-            "db_path": str(tmp_path / "work" / "database.db"),
-            "input_dir": str(tmp_path / "input"),
-            "work_dir": str(tmp_path / "work"),
-            "output_dir": str(tmp_path / "output"),
-        },
-        "sqlite": {"timeout": 30, "check_same_thread": False},
-        "pptx": {
-            "required_shapes": [
-                "TXT_ConfigFile",
-                "TXT_Conditions",
-                "TXT_Dispersion",
-                "TXT_GasHU",
-                "IMG_Main",
-                "IMG_Graph1",
-                "IMG_Graph2",
-            ]
-        },
-        "logging": {"level": "WARNING", "format": "%(message)s"},
-    }
-    cfg_path = tmp_path / "settings.yaml"
-    cfg_path.write_text(yaml.dump(cfg), encoding="utf-8")
-    return str(cfg_path)
+        assert os.path.isfile(json_path)
+        with open(json_path, encoding='utf-8') as f:
+            data = json.load(f)
+        assert len(data) == 3
+        assert data[0]['case_id'] == '1a'
+        assert data[0]['max_height'] == pytest.approx(0.125)

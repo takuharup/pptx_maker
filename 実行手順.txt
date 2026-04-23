@@ -1,0 +1,133 @@
+================================================================
+PPTX 自動生成ツール — 実行手順
+================================================================
+
+【概要】
+  Phase 1 (Python) : CSV → SQLite + cases.json 出力
+  Phase 2&3 (VBA)  : cases.json + image_mapping.json → 複数PPT生成
+
+【必要なもの】
+  - Python 3.x（Embedded Python も可、外部パッケージ不要）
+  - Microsoft Office（PowerPoint / Excel）
+  - このプロジェクトフォルダ一式
+
+================================================================
+手順1: Python Phase1 を実行（CSV → SQLite + JSON出力）
+================================================================
+
+コマンドプロンプト / PowerShell で実行：
+
+  python phase1_main.py --csv-path data\input\sample.csv --export-json
+
+Embedded Python の場合（フルパスを指定）：
+  C:\Python\python.exe phase1_main.py --csv-path data\input\sample.csv --export-json
+
+成功すると以下が表示されます：
+  ✓ Phase1 完了
+    - SQLiteDB : <プロジェクト>\data\work\database.db
+    - ケース数  : 16 件
+    - cases.json: <プロジェクト>\data\work\cases.json
+
+▶ 生成ファイル：
+  data\work\database.db   ← SQLite データベース
+  data\work\cases.json    ← VBA 読込用 JSON（Option B）
+
+================================================================
+手順2: JSON 画像マッピングを作成・配置
+================================================================
+
+data\work\image_mapping.json を以下の形式で作成してください：
+
+  {
+    "case1a": {
+      "IMG_Main":   "C:\\path\\to\\output_202604_case1a_snapshot_t20.png",
+      "IMG_Graph1": "C:\\path\\to\\202604_case1a_dispersion_height.png",
+      "IMG_Graph2": "C:\\path\\to\\202604_case1a_velocity.png"
+    },
+    "case1b": {
+      "IMG_Main":   "C:\\path\\to\\output_202604_case1b_snapshot_t20.png",
+      "IMG_Graph1": "C:\\path\\to\\202604_case1b_dispersion_height.png",
+      "IMG_Graph2": "C:\\path\\to\\202604_case1b_velocity.png"
+    },
+    ...
+  }
+
+【注意】
+  - パスはフルパス（絶対パス）で記述してください
+  - バックスラッシュは \\ と二重にしてください
+  - キー名は "case1a", "case1b" … の形式にしてください
+
+================================================================
+手順3: テンプレート PPTX を準備
+================================================================
+
+data\input\template.pptx を配置してください。
+
+必須シェイプ（PowerPoint のシェイプ名）：
+  テキストボックス:
+    TXT_ConfigFile  ← 設定ファイル名表示用
+    TXT_Conditions  ← 設定条件表示用
+    TXT_Dispersion  ← 90%分散高さ表示用
+    TXT_GasHU       ← ガスホールドアップ表示用
+  画像プレースホルダー:
+    IMG_Main        ← メイン画像用
+    IMG_Graph1      ← グラフ1用
+    IMG_Graph2      ← グラフ2用
+
+シェイプ名の確認方法：
+  PowerPoint → シェイプをクリック → ホーム → 配置 → オブジェクトの選択と表示
+  または シェイプ上で右クリック → サイズとプロパティ → 代替テキスト
+
+================================================================
+手順4: VBA Phase2&3 を実行（PPT 複数生成）
+================================================================
+
+【方法A: Excel から実行】
+  1. Excel を開く → Alt+F11 (VBA エディタ)
+  2. 挿入 → モジュール → 以下の .bas ファイルをインポート：
+       vba\JSONHelper.bas
+       vba\PPTGenerator.bas
+       vba\Phase2_3_Main.bas
+  3. Tools → References → 以下にチェック:
+       ✓ Microsoft Scripting Runtime
+       ✓ Microsoft PowerPoint XX.X Object Library
+  4. Phase2_3_Main の先頭の定数（BaseDir など）を確認・修正
+  5. マクロ実行: Run_Phase2_3
+
+【方法B: PowerPoint VBA から実行】
+  上記と同様。「ThisWorkbook.Path」→「ActivePresentation.Path」に変更。
+
+【BaseDir の設定について】
+  Phase2_3_Main.bas 冒頭の BaseDir() 関数を確認し、
+  プロジェクトフォルダのパスを正しく返すように調整してください。
+
+================================================================
+成果物
+================================================================
+
+  data\output\output_case1a.pptx
+  data\output\output_case1b.pptx
+  ...
+  data\output\output_case1q.pptx
+
+================================================================
+トラブルシューティング
+================================================================
+
+Q: Phase1 でエラーが出る
+  → CSV のファイルパスと文字コード（UTF-8）を確認
+  → CSV の列名が設定と一致しているか確認（settings.yaml）
+
+Q: VBA で「オブジェクトが見つかりません」エラー
+  → References 設定を確認（Microsoft Scripting Runtime 等）
+  → cases.json のパスが正しいか確認
+
+Q: 画像が置換されない
+  → image_mapping.json のパスが絶対パスかつ存在するか確認
+  → シェイプ名がテンプレートと完全一致しているか確認
+
+Q: Embedded Python で yaml が使えない
+  → config.py は yaml なしでも動作します（デフォルト値にフォールバック）
+  → --db-path, --json-path オプションで明示的にパス指定可能
+
+================================================================
