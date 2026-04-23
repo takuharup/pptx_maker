@@ -1,0 +1,23 @@
+paths:
+  db_path: data/work/database.db
+  input_dir: data/input
+  work_dir: data/work
+  output_dir: data/output
+
+sqlite:
+  timeout: 30
+  check_same_thread: false
+
+pptx:
+  required_shapes:
+    - TXT_ConfigFile
+    - TXT_Conditions
+    - TXT_Dispersion
+    - TXT_GasHU
+    - IMG_Main
+    - IMG_Graph1
+    - IMG_Graph2
+
+logging:
+  level: INFO
+  format: "[%(asctime)s] %(levelname)s: %(message)s"

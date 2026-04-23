@@ -1,0 +1,17 @@
+{
+  "case1a": {
+    "IMG_Main":   "sample_data/output_202604_case1a_snapshot_t20.png",
+    "IMG_Graph1": "sample_data/202604_case1a_dispersion_height.png",
+    "IMG_Graph2": "sample_data/202604_case1a_velocity.png"
+  },
+  "case1b": {
+    "IMG_Main":   "sample_data/output_202604_case1b_snapshot_t20.png",
+    "IMG_Graph1": "sample_data/202604_case1b_dispersion_height.png",
+    "IMG_Graph2": "sample_data/202604_case1b_velocity.png"
+  },
+  "case1c": {
+    "IMG_Main":   "sample_data/output_202604_case1c_snapshot_t20.png",
+    "IMG_Graph1": "sample_data/202604_case1c_dispersion_height.png",
+    "IMG_Graph2": "sample_data/202604_case1c_velocity.png"
+  }
+}
