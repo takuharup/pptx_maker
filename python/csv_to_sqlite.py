@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS image_mappings (
     case_id    TEXT PRIMARY KEY,
     img_main   TEXT,
     img_graph1 TEXT,
-    img_graph2 TEXT
+    img_graph2 TEXT,
+    FOREIGN KEY (case_id) REFERENCES cases(case_id)
 );
 """
 
