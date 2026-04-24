@@ -119,17 +119,10 @@ class CSVToSQLite:
             for r in rows:
                 con.execute(
                     """
-                    INSERT INTO cases
+                    INSERT OR REPLACE INTO cases
                         (case_id, config_file, conditions, max_height,
                          dispersion_height, gas_holdup, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(case_id) DO UPDATE SET
-                        config_file       = excluded.config_file,
-                        conditions        = excluded.conditions,
-                        max_height        = excluded.max_height,
-                        dispersion_height = excluded.dispersion_height,
-                        gas_holdup        = excluded.gas_holdup,
-                        created_at        = excluded.created_at
                     """,
                     (r['case_id'], r['config_file'], r['conditions'],
                      r['max_height'], r['dispersion_height'], r['gas_holdup'], now),
